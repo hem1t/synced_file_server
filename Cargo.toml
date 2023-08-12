@@ -1,0 +1,7 @@
+[workspace]
+members = ["bins/*", "common_tools/*"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+authors = ["hem1t <sunny10fb@gmail.com>"]
