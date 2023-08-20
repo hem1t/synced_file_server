@@ -1,4 +1,5 @@
 use std::{
+    env,
     fs::File,
     io::{BufRead, BufReader},
     path::PathBuf,
@@ -9,7 +10,7 @@ pub fn list_paths(path: PathBuf) -> Vec<PathBuf> {
     reader
         .lines()
         .map(|line| {
-            let path = PathBuf::from(line.unwrap());
+            let path = PathBuf::from(resolve_envs(line.unwrap()));
             if !path.exists() {
                 eprintln!("Warning Path: {:?}, does not exists.", path);
             }
@@ -18,15 +19,34 @@ pub fn list_paths(path: PathBuf) -> Vec<PathBuf> {
         .collect()
 }
 
+fn resolve_envs(path: String) -> String {
+    let new_path = path
+        .split('/')
+        .into_iter()
+        .map(|name| {
+            if name.is_empty() {
+                String::new()
+            } else if name.starts_with("$") {
+                env::var(name.get(1..).unwrap()).unwrap()
+            } else {
+                format!("/{}", name)
+            }
+        })
+        .collect::<String>();
+    new_path
+}
+
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
     fn test_file_paths_from_config() {
+        let config_path = format!("{}/.config", env::var("HOME").unwrap());
         assert_eq!(
             vec![
-                PathBuf::from("/home/user/.config"),
+                PathBuf::from(config_path),
                 PathBuf::from("/home/user/.local"),
                 PathBuf::from("/hlkj/ljoi/lj"),
             ],
