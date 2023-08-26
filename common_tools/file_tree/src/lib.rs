@@ -42,7 +42,8 @@ impl FTree {
     pub fn is_dir(&self) -> bool {
         return self.path.is_dir();
     }
-    pub fn is_file(self) -> bool {
+
+    pub fn is_file(&self) -> bool {
         return self.path.is_file();
     }
 }
