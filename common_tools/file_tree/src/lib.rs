@@ -1,8 +1,16 @@
 use std::{
-    fs,
+    fs, io,
     path::PathBuf,
     time::{Duration, SystemTime},
 };
+
+#[derive(Debug)]
+pub enum FTreeErr {
+    NotExists(PathBuf),
+    NotReadable(PathBuf),
+    NotWritable(PathBuf),
+    IOErr(io::Error),
+}
 
 pub struct FTree {
     path: PathBuf,
@@ -17,13 +25,13 @@ impl FTree {
         }
     }
 
-    pub fn from_path(path: PathBuf) -> Result<FTree, String> {
+    pub fn from_path(path: PathBuf) -> Result<FTree, FTreeErr> {
         let mut root = FTree::new(path.clone());
         if path.exists() {
             if path.is_dir() {
                 let entries = path.read_dir();
                 if entries.is_err() {
-                    return Err(format!("Can't read {:?}", path));
+                    return Err(FTreeErr::NotReadable(path.clone()));
                 }
 
                 for entry in entries.unwrap() {
@@ -35,13 +43,13 @@ impl FTree {
                             return child;
                         }
                     } else {
-                        return Err(format!("{:?} broken at: {:?}", entry, path));
+                        return Err(FTreeErr::IOErr(entry.err().unwrap()));
                     }
                 }
             }
             return Ok(root);
         } else {
-            Err(format!("Path {:?} does not exists", path))
+            return Err(FTreeErr::NotExists(path.clone()));
         }
     }
 
@@ -53,38 +61,39 @@ impl FTree {
         return self.path.is_file();
     }
 
-    pub fn as_string(&self) -> String {
+    pub fn as_string(&self) -> Result<String, FTreeErr> {
         let mut tree = String::from(self.path.to_str().unwrap());
-        tree.push_str(&self.file_time().as_secs().to_string().as_str());
+        tree.push_str(&self.file_time()?.as_secs().to_string().as_str());
 
         if self.has_children() {
             tree.push(',');
             for child in &self.children {
-                tree.push_str(&child.as_string());
+                tree.push_str(&child.as_string()?);
             }
         } else {
             tree.push(';');
         }
-        return tree;
+        return Ok(tree);
     }
 
     fn has_children(&self) -> bool {
         !&self.children.is_empty()
     }
 
-    fn file_time(&self) -> Duration {
-        if let Ok(time) = fs::metadata(self.path.clone())
-            .expect(format!("can't access {:?}", self.path).as_str())
-            .modified()
-        {
-            return time.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    fn file_time(&self) -> Result<Duration, FTreeErr> {
+        if let Ok(meta) = fs::metadata(self.path.clone()) {
+            if let Ok(time) = meta.modified() {
+                return Ok(time.duration_since(SystemTime::UNIX_EPOCH).unwrap());
+            } else {
+                eprintln!(
+                    "[Warning] Your platform doesn't supports File Time, so, considering file as new!"
+                );
+                return Ok(SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap());
+            }
         }
-        eprintln!(
-            "[Warning] Your platform doesn't supports File Time, so, considering file as new!"
-        );
-        return SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap();
+        return Err(FTreeErr::NotReadable(self.path.clone()));
     }
 }
 
@@ -99,6 +108,7 @@ mod tests {
             FTree::from_path(PathBuf::from("./examples_dir"))
                 .unwrap()
                 .as_string()
+                .unwrap()
         );
     }
 }
