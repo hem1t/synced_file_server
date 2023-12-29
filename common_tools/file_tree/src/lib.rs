@@ -1,4 +1,8 @@
-use std::path::PathBuf;
+use std::{
+    fs,
+    path::PathBuf,
+    time::{Duration, SystemTime},
+};
 
 pub struct FTree {
     path: PathBuf,
@@ -51,10 +55,12 @@ impl FTree {
 
     pub fn as_string(&self) -> String {
         let mut tree = String::from(self.path.to_str().unwrap());
+        tree.push_str(&self.file_time().as_secs().to_string().as_str());
+        tree.push(',');
+
         if self.has_children() {
             for child in &self.children {
                 tree.push_str(&child.as_string());
-                tree.push(',');
             }
         }
         return tree;
@@ -62,6 +68,21 @@ impl FTree {
 
     fn has_children(&self) -> bool {
         !&self.children.is_empty()
+    }
+
+    fn file_time(&self) -> Duration {
+        if let Ok(time) = fs::metadata(self.path.clone())
+            .expect(format!("can't access {:?}", self.path).as_str())
+            .modified()
+        {
+            return time.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+        }
+        eprintln!(
+            "[Warning] Your platform doesn't supports File Time, so, considering file as new!"
+        );
+        return SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
     }
 }
 
@@ -72,7 +93,7 @@ mod tests {
     #[test]
     fn test_ftree_from_path() {
         assert_eq!(
-            "./examples_dir./examples_dir/empty_dir,./examples_dir/test_dir./examples_dir/test_dir/a_dir./examples_dir/test_dir/a_dir/with_file,,./examples_dir/test_dir/hello_file,./examples_dir/test_dir/second_file,,",
+            "./examples_dir1703859968,./examples_dir/test_dir1703859968,./examples_dir/test_dir/a_dir1703859968,./examples_dir/test_dir/a_dir/with_file1703859968,./examples_dir/test_dir/hello_file1703859968,./examples_dir/test_dir/second_file1703859968,",
             FTree::from_path(PathBuf::from("./examples_dir"))
                 .unwrap()
                 .as_string()
