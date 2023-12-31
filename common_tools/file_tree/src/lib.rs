@@ -17,16 +17,27 @@ pub struct FTree {
     children: Vec<Box<FTree>>,
 }
 
+// This impl should hold private fns
+impl FTree {
+    fn has_children(&self) -> bool {
+        !&self.children.is_empty()
+    }
+}
+
+#[allow(dead_code)]
 impl FTree {
     fn new(path: PathBuf) -> Self {
-        FTree {
+        Self {
             path,
             children: Vec::new(),
         }
     }
 
-    pub fn from_path(path: PathBuf) -> Result<FTree, FTreeErr> {
-        let mut root = FTree::new(path.clone());
+    ///
+    /// Purpose: To create `FTree` recursively.
+    ///
+    pub fn from_path(path: PathBuf) -> Result<Self, FTreeErr> {
+        let mut root = Self::new(path.clone());
         if path.exists() {
             if path.is_dir() {
                 let entries = path.read_dir();
@@ -36,7 +47,7 @@ impl FTree {
 
                 for entry in entries.unwrap() {
                     if let Ok(entry) = entry {
-                        let child = FTree::from_path(entry.path());
+                        let child = Self::from_path(entry.path());
                         if let Ok(child) = child {
                             root.children.push(Box::new(child));
                         } else {
@@ -53,14 +64,37 @@ impl FTree {
         }
     }
 
-    pub fn is_dir(&self) -> bool {
-        return self.path.is_dir();
+    ///
+    /// Purpose: To create `FTree` recursively, out of string.
+    ///
+    pub fn from_string(tree: String) -> Result<Self, FTreeErr> {
+        todo!()
     }
 
-    pub fn is_file(&self) -> bool {
-        return self.path.is_file();
+    ///
+    /// Purpose: To return a time for the file or directory to check if
+    ///          it was recently modified.
+    ///
+    fn file_time(&self) -> Result<Duration, FTreeErr> {
+        if let Ok(meta) = fs::metadata(self.path.clone()) {
+            if let Ok(time) = meta.modified() {
+                return Ok(time.duration_since(SystemTime::UNIX_EPOCH).unwrap());
+            } else {
+                eprintln!(
+                    "[Warning] Your platform doesn't supports File Time, so, considering file as new!"
+                );
+                return Ok(SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap());
+            }
+        }
+        return Err(FTreeErr::NotReadable(self.path.clone()));
     }
 
+    ///
+    /// Purpose: To return unique string for the FTree Structure,
+    ///          which will have unique hash value, when calculated.
+    ///
     pub fn as_string(&self) -> Result<String, FTreeErr> {
         let mut tree = String::from(self.path.to_str().unwrap());
         tree.push(':');
@@ -77,24 +111,11 @@ impl FTree {
         return Ok(tree);
     }
 
-    fn has_children(&self) -> bool {
-        !&self.children.is_empty()
-    }
-
-    fn file_time(&self) -> Result<Duration, FTreeErr> {
-        if let Ok(meta) = fs::metadata(self.path.clone()) {
-            if let Ok(time) = meta.modified() {
-                return Ok(time.duration_since(SystemTime::UNIX_EPOCH).unwrap());
-            } else {
-                eprintln!(
-                    "[Warning] Your platform doesn't supports File Time, so, considering file as new!"
-                );
-                return Ok(SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap());
-            }
-        }
-        return Err(FTreeErr::NotReadable(self.path.clone()));
+    ///
+    /// Purpose: Create file structure using `FTree`.
+    ///
+    pub fn write_to_path(_path: PathBuf) -> Result<(), FTreeErr> {
+        todo!()
     }
 }
 
