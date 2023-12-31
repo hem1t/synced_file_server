@@ -1,7 +1,11 @@
 [workspace]
 members = ["bins/*", "common_tools/*"]
+resolver = "2"
 
 [workspace.package]
 version = "0.0.1"
 edition = "2021"
 authors = ["hem1t <sunny10fb@gmail.com>"]
+
+[workspace.dependencies]
+pretty_assertions = "1.4.0"

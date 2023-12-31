@@ -63,6 +63,7 @@ impl FTree {
 
     pub fn as_string(&self) -> Result<String, FTreeErr> {
         let mut tree = String::from(self.path.to_str().unwrap());
+        tree.push(':');
         tree.push_str(&self.file_time()?.as_secs().to_string().as_str());
 
         if self.has_children() {
@@ -103,8 +104,8 @@ mod tests {
 
     #[test]
     fn test_ftree_from_path() {
-        assert_eq!(
-            "./examples_dir1703859968,./examples_dir/test_dir1703859968,./examples_dir/test_dir/a_dir1703859968,./examples_dir/test_dir/a_dir/with_file1703859968;./examples_dir/test_dir/hello_file1703859968;./examples_dir/test_dir/second_file1703859968;",
+        pretty_assertions::assert_eq!(
+            "./examples_dir:1703885422,./examples_dir/test_dir:1703885422,./examples_dir/test_dir/second_file:1703885422;./examples_dir/test_dir/a_dir:1703885422,./examples_dir/test_dir/a_dir/with_file:1703885422;./examples_dir/test_dir/hello_file:1704060920;",
             FTree::from_path(PathBuf::from("./examples_dir"))
                 .unwrap()
                 .as_string()
